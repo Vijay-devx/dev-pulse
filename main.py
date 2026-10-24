@@ -3,9 +3,12 @@ main.py — FastAPI application, routes, HTMX endpoints, startup events.
 """
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from datetime import datetime
 import json
 import logging
-from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -22,17 +25,47 @@ from seed import seed_database
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+BASE_DIR = Path(__file__).resolve().parent
+
 # ─────────────────────────────────────────────────────────────────────────────
-# App Initialization
+# App Lifespan & Initialization
 # ─────────────────────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
+    logger.info("DevPulse starting up…")
+    try:
+        await init_db()
+        seeded = await seed_database()
+        if seeded:
+            logger.info("DB seeded with %d articles.", seeded)
+    except Exception as exc:
+        logger.error("DB init error: %s", exc)
+
+    try:
+        _start_scheduler()
+    except Exception as exc:
+        logger.error("Scheduler error: %s", exc)
+
+    yield
+
+    if _scheduler and _scheduler.running:
+        _scheduler.shutdown(wait=False)
+    logger.info("DevPulse shutting down.")
+
 
 app = FastAPI(
     title="DevPulse",
     description="High-Signal Tech Intelligence & News Aggregator for Software Engineers",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Jinja2 Template Filters & Globals
@@ -309,31 +342,6 @@ def _start_scheduler():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Startup / Shutdown
-# ─────────────────────────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    )
-    logger.info("DevPulse starting up…")
-    await init_db()
-    seeded = await seed_database()
-    if seeded:
-        logger.info("DB seeded with %d articles.", seeded)
-    _start_scheduler()
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    if _scheduler and _scheduler.running:
-        _scheduler.shutdown(wait=False)
-    logger.info("DevPulse shutting down.")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Query Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -376,7 +384,7 @@ async def _get_articles(
     )
 
     result = await session.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -389,10 +397,18 @@ async def home(
     session: AsyncSession = Depends(get_session),
 ):
     """Main page — renders the full shell with Daily Briefing active."""
-    articles = await _get_articles(session, category="daily_briefing")
+    try:
+        articles = await _get_articles(session, category="daily_briefing")
+    except Exception as exc:
+        logger.warning("Home route DB auto-init triggered: %s", exc)
+        await init_db()
+        await seed_database()
+        articles = await _get_articles(session, category="daily_briefing")
+
     return templates.TemplateResponse(
-        "index.html",
-        {
+        request=request,
+        name="index.html",
+        context={
             "request": request,
             "articles": articles,
             "active_category": "daily_briefing",
@@ -419,16 +435,23 @@ async def feed_partial(
     if category not in VALID_CATEGORIES:
         category = "daily_briefing"
 
-    articles = await _get_articles(
-        session,
-        category=category,
-        search=search or None,
-        page=page,
-    )
+    try:
+        articles = await _get_articles(
+            session,
+            category=category,
+            search=search or None,
+            page=page,
+        )
+    except Exception as exc:
+        logger.warning("Feed route DB auto-init: %s", exc)
+        await init_db()
+        await seed_database()
+        articles = await _get_articles(session, category=category, search=search or None, page=page)
 
     return templates.TemplateResponse(
-        "partials/feed_cards.html",
-        {
+        request=request,
+        name="partials/feed_cards.html",
+        context={
             "request": request,
             "articles": articles,
             "active_category": category,
@@ -454,8 +477,9 @@ async def article_crux(
         raise HTTPException(status_code=404, detail="Article not found")
 
     return templates.TemplateResponse(
-        "partials/crux_drawer.html",
-        {
+        request=request,
+        name="partials/crux_drawer.html",
+        context={
             "request": request,
             "article": article,
         },
@@ -477,8 +501,9 @@ async def article_full(
         raise HTTPException(status_code=404, detail="Article not found")
 
     return templates.TemplateResponse(
-        "partials/full_reader.html",
-        {
+        request=request,
+        name="partials/full_reader.html",
+        context={
             "request": request,
             "article": article,
         },
