@@ -1,0 +1,187 @@
+<!-- ── Section Header ────────────────────────────────────────────────────── -->
+<div class="flex items-center justify-between mb-5">
+  <div>
+    {% if search_query %}
+    <h1 class="text-xl font-semibold text-slate-100">🔍 Search Results</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Showing results for "<span class="text-violet-400 font-medium">{{ search_query }}</span>"</p>
+    {% elif active_category == 'daily_briefing' %}
+    <h1 class="text-xl font-semibold text-slate-100">⚡ Daily Briefing</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Highest-signal stories of the last 24–48 hours · importance score ≥ 80</p>
+    {% elif active_category == 'rea' %}
+    <h1 class="text-xl font-semibold text-slate-100">🔬 Reverse Engineering & Low-Level</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Binary exploitation, firmware, malware analysis, decompilation, hardware hacking</p>
+    {% elif active_category == 'bugs_cves' %}
+    <h1 class="text-xl font-semibold text-slate-100">🚨 Bugs, CVEs & Post-Mortems</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Language engine bugs, critical CVEs, memory vulnerabilities, outage post-mortems</p>
+    {% elif active_category == 'applied_ai' %}
+    <h1 class="text-xl font-semibold text-slate-100">🤖 Applied AI & Dev Workflows</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Coding agents, local LLMs, RAG pipelines — real developer utility, zero hype</p>
+    {% elif active_category == 'dev_qol' %}
+    <h1 class="text-xl font-semibold text-slate-100">🛠️ Dev Quality-of-Life</h1>
+    <p class="text-sm text-slate-500 mt-0.5">CLI tools, dotfile utilities, IDE extensions, and open-source workflow boosters</p>
+    {% elif active_category == 'architecture' %}
+    <h1 class="text-xl font-semibold text-slate-100">🏗️ High-Impact Tech & Architecture</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Deep-dive engineering blogs, distributed databases, compiler breakthroughs</p>
+    {% endif %}
+  </div>
+
+  <div class="text-xs text-slate-500 font-mono">
+    {{ articles | length }} {% if articles | length == 1 %}story{% else %}stories{% endif %}
+  </div>
+</div>
+
+{% if articles %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-3" id="articles-grid">
+  {% for article in articles %}
+  {% set cat = article.category or 'architecture' %}
+  {% set tags = article.tags | from_json %}
+
+  <!-- ── Article Card ─────────────────────────────────────────────────── -->
+  <article
+    class="group relative flex flex-col bg-[#141720] border border-slate-800/60
+           rounded-xl p-4 cursor-pointer transition-all duration-200
+           hover:border-slate-600/80 hover:bg-[#171923] hover:shadow-lg
+           hover:shadow-black/30 animate-fade-in"
+    hx-get="/article/{{ article.id }}/crux"
+    hx-target="#drawer-content"
+    hx-swap="innerHTML"
+    hx-indicator="#feed-loading"
+    style="animation-delay: {{ loop.index0 * 30 }}ms">
+
+    <!-- Top row: Category pill + badge -->
+    <div class="flex items-start justify-between gap-3 mb-2.5">
+
+      <!-- Category pill -->
+      <span class="pill-{{ cat }} inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border shrink-0">
+        {{ cat | category_label }}
+      </span>
+
+      <!-- Importance badge -->
+      {% if article.simple_badge or article.importance_badge %}
+      <span x-show="beginnerMode" class="text-xs text-emerald-300 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded-md font-medium text-right shrink-0">
+        {{ article.simple_badge or article.importance_badge }}
+      </span>
+      <span x-show="!beginnerMode" class="text-xs text-slate-400 bg-slate-800/60 border border-slate-700/40 px-2 py-0.5 rounded-md font-medium text-right shrink-0">
+        {{ article.importance_badge }}
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Title (Simple plain English vs Hardcore Technical) -->
+    <h2 x-show="beginnerMode" class="text-sm font-semibold text-slate-100 leading-snug mb-2 group-hover:text-emerald-300 transition-colors line-clamp-2">
+      {{ article.simple_title or (article | display_title) }}
+    </h2>
+    <h2 x-show="!beginnerMode" class="text-sm font-semibold text-slate-200 leading-snug mb-2 group-hover:text-white transition-colors line-clamp-2">
+      {{ article | display_title }}
+    </h2>
+
+    <!-- Preview: Plain English analogy snippet for beginners -->
+    {% if article.plain_english_summary %}
+    <div x-show="beginnerMode" class="text-xs text-slate-300 bg-slate-900/70 border-l-2 border-emerald-500/70 pl-2.5 pr-2 py-1.5 rounded-r mb-3 leading-relaxed">
+      <span class="text-emerald-400 font-medium">In plain English:</span> {{ article.plain_english_summary }}
+    </div>
+    {% endif %}
+
+    <!-- Crux preview snippet -->
+    {% if article.crux_what_it_is %}
+    <p x-show="!beginnerMode" class="text-xs text-slate-500 leading-relaxed line-clamp-2 mb-3">
+      {{ article.crux_what_it_is[:160] }}{% if article.crux_what_it_is | length > 160 %}…{% endif %}
+    </p>
+    {% endif %}
+
+    <!-- Tags -->
+    {% if tags %}
+    <div class="flex flex-wrap gap-1 mb-3">
+      {% for tag in tags[:4] %}
+      <span class="text-xs text-slate-500 font-mono bg-slate-800/80 px-1.5 py-0.5 rounded">{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Bottom meta row -->
+    <div class="flex items-center justify-between mt-auto pt-2 border-t border-slate-800/60">
+
+      <!-- Source + time -->
+      <div class="flex items-center gap-2 text-xs text-slate-600">
+        <span class="font-medium text-slate-500">{{ article.source_domain or 'unknown' }}</span>
+        <span>·</span>
+        <span>{{ article.published_at | time_ago }}</span>
+      </div>
+
+      <!-- Right side: read times + HN score -->
+      <div class="flex items-center gap-2">
+        {% if article.hn_score > 0 %}
+        <span class="flex items-center gap-1 text-xs text-orange-400 font-medium">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2l2.39 4.84 5.34.78-3.87 3.77.91 5.32L10 14.27l-4.77 2.44.91-5.32L2.27 7.62l5.34-.78z"/>
+          </svg>
+          {{ article.hn_score }}
+        </span>
+        {% endif %}
+
+        <!-- Depth badge -->
+        {% if article.technical_depth_score >= 8 %}
+        <span class="text-xs text-violet-400 font-medium">⚡ {{ article.technical_depth_score }}/10</span>
+        {% endif %}
+
+        <!-- Read time -->
+        <span class="text-xs text-slate-600 font-mono">
+          {{ article | read_time_crux }} · {{ article | read_time_full }}
+        </span>
+
+        <!-- Bookmark indicator -->
+        {% if article.bookmarked %}
+        <span class="text-yellow-400 text-xs">★</span>
+        {% endif %}
+
+        <!-- Chevron -->
+        <svg class="w-3.5 h-3.5 text-slate-700 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Daily briefing glow accent -->
+    {% if article.is_daily_briefing %}
+    <div class="absolute top-0 left-0 w-0.5 h-full bg-gradient-to-b from-violet-500 via-blue-500 to-transparent rounded-l-xl opacity-80"></div>
+    {% endif %}
+
+  </article>
+  {% endfor %}
+</div>
+
+<!-- Load more -->
+{% if has_more is defined and has_more %}
+<div class="mt-6 flex justify-center">
+  <button
+    hx-get="/feed?category={{ active_category }}&page={{ page + 1 }}"
+    hx-target="#articles-grid"
+    hx-swap="beforeend"
+    class="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700
+           text-slate-400 hover:text-slate-300 text-sm font-medium transition-all
+           hover:border-slate-600">
+    Load More
+    <svg class="inline w-3.5 h-3.5 ml-1.5 -mt-0.5 htmx-indicator animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+  </button>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty state -->
+<div class="flex flex-col items-center justify-center py-20 text-center">
+  <div class="w-16 h-16 rounded-2xl bg-slate-800/60 border border-slate-700/40 flex items-center justify-center mb-4 text-2xl">
+    📭
+  </div>
+  <h3 class="text-lg font-medium text-slate-400 mb-1">No articles found</h3>
+  <p class="text-sm text-slate-600 max-w-xs">
+    {% if search_query %}
+    No results for "<span class="text-slate-500">{{ search_query }}</span>". Try a different search term.
+    {% else %}
+    No articles in this category yet. Hit <strong class="text-slate-500">Sync Now</strong> to fetch the latest stories.
+    {% endif %}
+  </p>
+</div>
+{% endif %}

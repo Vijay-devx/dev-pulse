@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DevPulse{% endblock %} — High-Signal Tech Intelligence</title>
+
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          },
+          colors: {
+            surface: {
+              50:  '#f8fafc',
+              100: '#1e2130',
+              200: '#171923',
+              300: '#141720',
+              400: '#0f1117',
+            },
+            accent: {
+              violet: '#7c3aed',
+              blue:   '#3b82f6',
+              emerald:'#10b981',
+              rose:   '#f43f5e',
+              amber:  '#f59e0b',
+            }
+          },
+          animation: {
+            'slide-in-right': 'slideInRight 0.25s ease-out',
+            'fade-in': 'fadeIn 0.2s ease-out',
+          },
+          keyframes: {
+            slideInRight: {
+              '0%':   { transform: 'translateX(100%)', opacity: '0' },
+              '100%': { transform: 'translateX(0)',    opacity: '1' },
+            },
+            fadeIn: {
+              '0%':   { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+  <!-- Alpine.js -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #141720; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Drawer overlay */
+    #drawer-overlay {
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+
+    /* Prose / article reader typography */
+    .prose-devpulse h1 { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; margin: 1.5rem 0 0.75rem; }
+    .prose-devpulse h2 { font-size: 1.25rem; font-weight: 600; color: #e2e8f0; margin: 1.25rem 0 0.5rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.25rem; }
+    .prose-devpulse h3 { font-size: 1.05rem; font-weight: 600; color: #cbd5e1; margin: 1rem 0 0.4rem; }
+    .prose-devpulse p  { color: #94a3b8; line-height: 1.8; margin: 0.75rem 0; }
+    .prose-devpulse a  { color: #818cf8; text-decoration: underline; text-underline-offset: 3px; }
+    .prose-devpulse a:hover { color: #a5b4fc; }
+    .prose-devpulse ul { list-style: disc; padding-left: 1.5rem; color: #94a3b8; margin: 0.5rem 0; }
+    .prose-devpulse ol { list-style: decimal; padding-left: 1.5rem; color: #94a3b8; margin: 0.5rem 0; }
+    .prose-devpulse li { margin: 0.3rem 0; line-height: 1.7; }
+    .prose-devpulse code:not(pre code) {
+      background: #1e293b; color: #7dd3fc; padding: 0.15rem 0.4rem;
+      border-radius: 4px; font-size: 0.85em; font-family: 'JetBrains Mono', monospace;
+    }
+    .prose-devpulse pre {
+      background: #0f172a; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 1rem; overflow-x: auto; margin: 1rem 0;
+    }
+    .prose-devpulse pre code {
+      color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+      line-height: 1.7;
+    }
+    .prose-devpulse table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .prose-devpulse th {
+      background: #1e293b; color: #94a3b8; text-align: left;
+      padding: 0.5rem 0.75rem; font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.05em; border: 1px solid #334155;
+    }
+    .prose-devpulse td {
+      padding: 0.5rem 0.75rem; color: #94a3b8; border: 1px solid #1e293b;
+      font-size: 0.9rem;
+    }
+    .prose-devpulse tr:nth-child(even) td { background: #0f172a; }
+    .prose-devpulse blockquote {
+      border-left: 3px solid #7c3aed; padding-left: 1rem; margin: 1rem 0;
+      color: #94a3b8; font-style: italic;
+    }
+    .prose-devpulse hr { border-color: #1e293b; margin: 1.5rem 0; }
+
+    /* Category pill color variants */
+    .pill-rea         { background: rgba(239,68,68,0.15);  color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+    .pill-bugs_cves   { background: rgba(249,115,22,0.15); color: #fdba74; border-color: rgba(249,115,22,0.3); }
+    .pill-applied_ai  { background: rgba(139,92,246,0.15); color: #c4b5fd; border-color: rgba(139,92,246,0.3); }
+    .pill-dev_qol     { background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: rgba(16,185,129,0.3); }
+    .pill-architecture{ background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
+    .pill-daily_briefing { background: rgba(245,158,11,0.15); color: #fcd34d; border-color: rgba(245,158,11,0.3); }
+
+    /* HTMX loading indicator */
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="bg-[#0f1117] text-slate-200 font-sans antialiased min-h-screen"
+      x-data="{ drawerOpen: false, fullReaderOpen: false, beginnerMode: (localStorage.getItem('devpulse_beginner') !== 'false') }"
+      @open-crux.window="drawerOpen = true; fullReaderOpen = false"
+      @open-reader.window="fullReaderOpen = true"
+      @close-drawer.window="drawerOpen = false; fullReaderOpen = false"
+      @close-reader.window="fullReaderOpen = false"
+      @keydown.escape.window="drawerOpen = false; fullReaderOpen = false">
+
+  <!-- ── Top Header ─────────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/60 bg-[#0f1117]/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-14">
+
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2.5 group">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-violet-900/30">
+            D
+          </div>
+          <span class="font-semibold text-slate-100 text-base tracking-tight">DevPulse</span>
+          <span class="hidden sm:inline text-slate-600 text-xs font-normal mt-px">Tech Intelligence</span>
+        </a>
+
+        <!-- Search -->
+        <div class="flex-1 max-w-md mx-6 hidden sm:block">
+          <form onsubmit="event.preventDefault();" class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">⌕</span>
+            <input type="text"
+                   name="search"
+                   placeholder="Search articles by title, tag, or topic…"
+                   class="w-full bg-slate-800/60 border border-slate-700/50 rounded-lg pl-8 pr-4 py-1.5
+                          text-sm text-slate-300 placeholder-slate-500 focus:outline-none
+                          focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 transition-all"
+                   hx-trigger="keyup changed delay:350ms, search"
+                   hx-get="/feed"
+                   hx-target="#feed-container"
+                   hx-swap="innerHTML"
+                   hx-include="[name='category']" />
+          </form>
+        </div>
+
+        <!-- Right controls -->
+        <div class="flex items-center gap-3">
+          <!-- Beginner / Plain English Mode Toggle -->
+          <button @click="beginnerMode = !beginnerMode; localStorage.setItem('devpulse_beginner', beginnerMode)"
+                  type="button"
+                  title="Toggle between Simple Plain English and Hardcore Technical Jargon"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-sm"
+                  :class="beginnerMode
+                    ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30'
+                    : 'bg-slate-800/80 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:border-slate-600'">
+            <span class="text-sm" x-text="beginnerMode ? '🎓' : '⚡'"></span>
+            <span x-text="beginnerMode ? 'Plain English: ON' : 'Technical Mode'"></span>
+          </button>
+
+          <!-- Sync status -->
+          <div id="sync-status"
+               hx-get="/sync/status"
+               hx-trigger="load"
+               hx-swap="innerHTML">
+            <span class="text-slate-600 text-xs">Loading…</span>
+          </div>
+
+          <!-- Sync Now button -->
+          <button hx-post="/sync"
+                  hx-target="#sync-status"
+                  hx-swap="innerHTML"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700
+                         border border-slate-700/50 text-slate-300 text-xs font-medium
+                         transition-all hover:border-violet-500/40 hover:text-violet-300">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Sync Now
+          </button>
+
+          <!-- LLM indicator -->
+          {% if llm_enabled %}
+          <span class="hidden sm:flex items-center gap-1 text-xs text-emerald-500 bg-emerald-950/50 border border-emerald-900/40 px-2 py-1 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            LLM Active
+          </span>
+          {% else %}
+          <span class="hidden sm:flex items-center gap-1 text-xs text-slate-500 bg-slate-800/50 border border-slate-700/40 px-2 py-1 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            Heuristic
+          </span>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main content ────────────────────────────────────────────────────── -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── Drawer Overlay ─────────────────────────────────────────────────── -->
+  <div id="drawer-overlay"
+       x-show="drawerOpen"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="drawerOpen = false"
+       class="fixed inset-0 z-50 bg-black/60"
+       style="display:none">
+  </div>
+
+  <!-- ── Crux Drawer (Stage 2) ──────────────────────────────────────────── -->
+  <div id="crux-drawer"
+       x-show="drawerOpen"
+       x-transition:enter="transition ease-out duration-250"
+       x-transition:enter-start="translate-x-full opacity-0"
+       x-transition:enter-end="translate-x-0 opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="translate-x-0 opacity-100"
+       x-transition:leave-end="translate-x-full opacity-0"
+       class="fixed right-0 top-0 h-full w-full sm:w-[540px] lg:w-[600px] z-50
+              bg-[#141720] border-l border-slate-800 shadow-2xl shadow-black/50
+              flex flex-col overflow-hidden"
+       style="display:none">
+
+    <!-- Drawer header -->
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800/80">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
+        <span class="text-sm font-medium text-slate-300">The Crux</span>
+      </div>
+      <button @click="drawerOpen = false; fullReaderOpen = false"
+              class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer content (HTMX-loaded) -->
+    <div id="drawer-content" class="flex-1 overflow-y-auto">
+      <!-- Stage 2 crux content loads here -->
+    </div>
+  </div>
+
+  <!-- ── Full Reader Overlay (Stage 3) ──────────────────────────────────── -->
+  <div id="full-reader-overlay"
+       x-show="fullReaderOpen"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-2"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[60] bg-[#0f1117] overflow-y-auto"
+       style="display:none">
+    <div id="full-reader-content" class="max-w-3xl mx-auto px-4 py-8 pb-20">
+      <!-- Stage 3 full article loads here -->
+    </div>
+  </div>
+
+  <!-- ── HTMX + Alpine Integration ────────────────────────────────────── -->
+  <script>
+    document.addEventListener('htmx:afterSwap', function(evt) {
+      const targetId = evt.detail.target.id;
+      if (targetId === 'drawer-content') {
+        window.dispatchEvent(new CustomEvent('open-crux'));
+      }
+      if (targetId === 'full-reader-content') {
+        window.dispatchEvent(new CustomEvent('open-reader'));
+      }
+    });
+
+    window.DevPulse = {
+      openCrux() {
+        window.dispatchEvent(new CustomEvent('open-crux'));
+      },
+      openReader() {
+        window.dispatchEvent(new CustomEvent('open-reader'));
+      },
+      closeDrawer() {
+        window.dispatchEvent(new CustomEvent('close-drawer'));
+      },
+      closeFullReader() {
+        window.dispatchEvent(new CustomEvent('close-reader'));
+      }
+    };
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
