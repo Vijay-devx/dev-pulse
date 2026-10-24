@@ -214,7 +214,8 @@ def _render_markdown(text: Optional[str]) -> str:
             if in_list:
                 html_parts.append("</ul>")
                 in_list = False
-            html_parts.append(f"<li>{_inline(_re.sub(r'^\d+\.\s', '', line))}</li>")
+            item_text = _re.sub(r'^\d+\.\s', '', line)
+            html_parts.append(f"<li>{_inline(item_text)}</li>")
         # Blockquote
         elif line.startswith("> "):
             flush_paragraph()
